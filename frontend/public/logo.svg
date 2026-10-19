@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- 白色背景圆 -->
+  <circle cx="100" cy="100" r="98" fill="white" stroke="#E5E7EB" stroke-width="2"/>
+  <!-- 黄色主圆 -->
+  <circle cx="100" cy="100" r="90" fill="#F59E0B"/>
+
+  <!-- 地面波浪 -->
+  <ellipse cx="100" cy="148" rx="72" ry="14" fill="#D97706"/>
+
+  <!-- 卡车车身（白色） -->
+  <!-- 货厢 -->
+  <rect x="56" y="75" width="72" height="42" rx="4" fill="white"/>
+  <!-- 驾驶室 -->
+  <rect x="108" y="83" width="30" height="34" rx="4" fill="white"/>
+  <!-- 驾驶室窗 -->
+  <rect x="112" y="87" width="20" height="14" rx="2" fill="#F59E0B"/>
+
+  <!-- 轮子 -->
+  <circle cx="75" cy="120" r="10" fill="#D97706"/>
+  <circle cx="75" cy="120" r="5" fill="white"/>
+  <circle cx="120" cy="120" r="10" fill="#D97706"/>
+  <circle cx="120" cy="120" r="5" fill="white"/>
+
+  <!-- 公司名称 -->
+  <text x="100" y="158" font-family="Arial, sans-serif" font-size="13" font-weight="700"
+        fill="white" text-anchor="middle" letter-spacing="0.5">Excellent Construction</text>
+  <text x="100" y="173" font-family="Arial, sans-serif" font-size="11" font-weight="600"
+        fill="rgba(255,255,255,0.85)" text-anchor="middle" letter-spacing="1">Ltd</text>
+</svg>

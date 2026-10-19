@@ -1,0 +1,20 @@
+# Only backend/ is needed by the root Dockerfile; keep the build context small.
+.git
+**/.env
+**/.env.*
+!**/.env.example
+.claude
+.agents
+.vscode
+.firecrawl
+.sixth
+**/node_modules
+**/dist
+frontend
+driver-app
+docs
+database
+*.docx
+*.doc
+*.png
+start-dev.bat

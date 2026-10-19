@@ -1,0 +1,253 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f6f8fb;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #cbd5e1, #94a3b8); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #94a3b8, #64748b); }
+
+/* Ant Design overrides */
+.ant-layout-sider {
+  box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+  backdrop-filter: blur(10px);
+}
+
+.page-container {
+  padding: 24px;
+}
+
+.stat-card {
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+}
+
+.ant-card {
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+/* Status badges — flat, soft tints */
+.status-pending {
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.status-active {
+  color: #047857;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.status-rejected {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.status-disabled {
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Map container */
+.map-container {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+/* Glass morphism effects */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Primary button — clean solid amber, subtle depth */
+.ant-btn-primary {
+  background: #f59e0b !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.25) !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.ant-btn-primary:hover {
+  background: #d97706 !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3) !important;
+}
+
+.ant-btn-primary.ant-btn-dangerous {
+  background: #ef4444 !important;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.25) !important;
+}
+.ant-btn-primary.ant-btn-dangerous:hover {
+  background: #dc2626 !important;
+}
+
+/* Input focus effects */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Table styling — clean, light, fresh */
+.ant-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 13px;
+  border-bottom: 1px solid #eef2f7 !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f3f5f9 !important;
+  transition: background 0.15s ease;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+
+/* Modal — compact, capped height, body scrolls so footer stays visible */
+.ant-modal {
+  top: 56px;
+  padding-bottom: 56px;
+}
+
+.ant-modal-content {
+  border-radius: 16px !important;
+  overflow: hidden;
+  padding: 0 !important;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.16) !important;
+}
+
+.ant-modal-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 16px 24px !important;
+  margin-bottom: 0 !important;
+}
+
+.ant-modal-body {
+  padding: 20px 24px !important;
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid #f1f5f9;
+  padding: 12px 24px !important;
+  margin-top: 0 !important;
+}
+
+/* Menu styling */
+.ant-menu-light {
+  background: transparent !important;
+}
+
+/* Animation utilities */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Card hover lift effect */
+.lift-on-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lift-on-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.12);
+}
+
+/* Badge pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.badge-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
