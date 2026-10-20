@@ -25,6 +25,8 @@ export const dashboard: LocaleBundle = {
     'dashboard.map_driver_fallback': '司机',
     'dashboard.map_speed_label': '速度：',
     'dashboard.map_coords_label': '坐标：',
+    'dashboard.map_fullscreen': '全屏地图',
+    'dashboard.map_exit_fullscreen': '退出全屏',
     // 轨迹回放
     'dashboard.track_replay': '轨迹回放',
     'dashboard.track_search_placeholder': '搜索任务名 / 客户 / 司机，选择查看行驶轨迹',
@@ -55,6 +57,8 @@ export const dashboard: LocaleBundle = {
     'dashboard.map_driver_fallback': 'Driver',
     'dashboard.map_speed_label': 'Speed: ',
     'dashboard.map_coords_label': 'Position: ',
+    'dashboard.map_fullscreen': 'Full screen',
+    'dashboard.map_exit_fullscreen': 'Exit full screen',
     'dashboard.track_replay': 'Trip Replay',
     'dashboard.track_search_placeholder': 'Search by job, client or driver to replay a route',
     'dashboard.track_option': '{{title}} ({{status}})',

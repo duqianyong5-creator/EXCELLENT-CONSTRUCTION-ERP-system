@@ -1,50 +1,50 @@
 @echo off
 chcp 65001 > nul
-title 货车调度系统 - 开发启动
+title ECT ERP - development start
 
 echo.
 echo ========================================
-echo   货车司机调度管理系统 - 开发环境启动
+echo   ECT ERP - Fleet Dispatch Management System
+echo   development start (backend + web console)
 echo ========================================
 echo.
 
-:: 检查 .env 是否存在
+:: the backend needs its environment file (database / Supabase / JWT settings)
 if not exist "backend\.env" (
-    echo [!] backend\.env 未找到，正在从模板创建...
-    copy "backend\.env.example" "backend\.env"
-    echo [!] 请编辑 backend\.env 填写 Supabase 配置后重新运行
+    echo [!] backend\.env not found - creating it from backend\.env.example ...
+    copy "backend\.env.example" "backend\.env" > nul
+    echo [!] Edit backend\.env with your database and Supabase settings, then run this script again.
     pause
     exit /b
 )
 
-:: 安装依赖
-echo [1/4] 安装后端依赖...
+echo [1/4] Installing backend dependencies...
 cd backend
 call npm install --silent
 cd ..
 
-echo [2/4] 安装前端依赖...
+echo [2/4] Installing web console dependencies...
 cd frontend
 call npm install --silent
 cd ..
 
-echo [3/4] 启动后端 (端口 3000)...
-start "后端 NestJS" cmd /k "cd /d %~dp0backend && npm run start:dev"
+echo [3/4] Starting the backend (port 3000)...
+start "ECT ERP backend (NestJS)" cmd /k "cd /d %~dp0backend && npm run start:dev"
 
 timeout /t 3 > nul
 
-echo [4/4] 启动前端 (端口 5173)...
-start "前端 React" cmd /k "cd /d %~dp0frontend && npm run dev"
+echo [4/4] Starting the web console (port 5173)...
+start "ECT ERP web console (Vite)" cmd /k "cd /d %~dp0frontend && npm run dev"
 
 echo.
 echo ========================================
-echo   启动完成！
-echo   前端: http://localhost:5173
-echo   后端: http://localhost:3000
-echo   API文档: http://localhost:3000/api/docs
-echo
-echo   默认账户: admin@trucksystem.com
-echo   默认密码: Admin@123456
+echo   Started.
+echo   Web console : http://localhost:5173
+echo   Backend API : http://localhost:3000
+echo   API docs    : http://localhost:3000/api/docs
+echo.
+echo   Sign in with the administrator account (see docs/DEPLOY.md)
+echo   and change the default administrator password on the first login.
 echo ========================================
 echo.
 pause

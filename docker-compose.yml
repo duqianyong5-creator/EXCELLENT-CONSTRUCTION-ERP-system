@@ -1,8 +1,14 @@
-version: '3.9'
-
 # ============================================================
-# 货车调度管理系统 - Docker Compose
-# 数据库使用 Supabase（云端 PostgreSQL），本地只启动后端+前端
+# ECT ERP — self-hosted docker-compose (backend + web console)
+#
+# Production runs on Railway + Supabase (see docs/DEPLOY.md); this file is for
+# running the same images on a single machine. The database is not included:
+# point backend/.env at a Supabase project or any PostgreSQL 15+.
+#
+# Ports
+#   80    web admin console (nginx, proxies /api, /uploads and /socket.io to the backend)
+#   3000  backend HTTP API (also reachable directly, e.g. for the mobile app)
+#   5023  JT/T 808 TCP gateway for the hardware GPS trackers — must differ from PORT
 # ============================================================
 
 services:
@@ -10,15 +16,18 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: truck_backend
+    container_name: ect_backend
     restart: unless-stopped
-    env_file: .env
+    env_file: ./backend/.env
     environment:
       NODE_ENV: production
       PORT: 3000
+      JT808_PORT: 5023
       FRONTEND_URL: http://localhost
+      TZ: Pacific/Auckland
     ports:
       - "3000:3000"
+      - "5023:5023"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/ping"]
       interval: 30s
@@ -29,9 +38,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_GOOGLE_MAPS_KEY: ${GOOGLE_MAPS_API_KEY:-}
-    container_name: truck_frontend
+    container_name: ect_frontend
     restart: unless-stopped
     depends_on:
       - backend

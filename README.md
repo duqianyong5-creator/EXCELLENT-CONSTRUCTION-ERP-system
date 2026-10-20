@@ -1,189 +1,110 @@
-# 货车司机调度与管理系�?
-商业级全栈调度系统，支持多角色权限、任务派发、GPS 实时追踪、工时管理、异常检测、通知�?Supabase 云数据库�?
-## 技术栈
+# ECT ERP — Fleet Dispatch Management System
 
-| 层级 | 技�?|
-| --- | --- |
-| Web 前端 | React 18 + Vite + Ant Design 5 + Redux Toolkit + i18n |
-| 司机 App | Expo + React Native + Expo Router + Redux Toolkit |
-| 后端 | NestJS 10 + TypeORM + Socket.io + Swagger |
-| 数据�?| Supabase PostgreSQL |
-| 文件存储 | Supabase Storage |
-| 地图 | Google Maps / Leaflet |
-| 认证 | JWT + Passport |
-| 部署 | Docker + Nginx |
+Dispatch, live vehicle tracking, work-hour records and alarms for **Excellent Construction Ltd** (Auckland, New Zealand).
+One backend, one shared database, and three front ends:
 
-## 项目结构
+| Component | Stack | Delivered as |
+|---|---|---|
+| Backend service | NestJS 10 · TypeORM · Socket.IO · JT/T 808 TCP gateway | Docker image on Railway |
+| Web Admin Console | React 18 · Vite · Ant Design 5 · Leaflet · i18next (EN / 中文) | Windows desktop installer (Electron) |
+| ECT Technician mobile app | Expo / React Native · Redux Toolkit · background location | Android APK / iOS via EAS |
+| Database & files | Supabase (PostgreSQL + Storage, signed URLs) | Cloud |
 
-```text
-truck-system/
-├── backend/                 # NestJS 后端服务
-�?  └── src/
-�?      ├── auth/            # 登录、注册、JWT 策略
-�?      ├── users/           # 用户、角色、审�?�?      ├── tasks/           # 任务创建、分配、开始、完成、取�?�?      ├── gps/             # GPS 上报、轨迹、异常检�?�?      ├── work-records/    # 工时记录
-�?      ├── adjustments/     # 工时调整和操作日�?�?      ├── notifications/   # 通知接口�?WebSocket 网关
-�?      └── common/          # Guards、Decorators、Storage、Email
-├── frontend/                # React Web 前端
-�?  └── src/
-�?      ├── pages/auth/      # 登录、注�?�?      ├── pages/admin/     # 管理�?调度员页�?�?      ├── pages/client/    # 客户订单、个人中心、通知
-�?      ├── pages/driver/    # Web 端司机入口提�?�?      ├── store/           # Redux 状�?�?      ├── api/             # Axios API 封装
-�?      └── hooks/           # Socket hooks
-├── driver-app/              # Expo 司机移动�?�?  ├── app/                 # Expo Router 页面
-�?  └── src/
-�?      ├── api/             # 移动�?API 封装
-�?      └── store/           # 移动�?Redux 状�?├── database/
-�?  └── database.sql         # 唯一数据库初始化脚本
-├── docs/                    # API 和部署文�?├── docker-compose.yml       # 后端 + 前端容器编排
-└── start-dev.bat            # Windows 本地启动脚本
+## What it does
+
+- **Tasks** — create, assign, accept (with the vehicle plate), run, complete with photos and notes; task names are generated as `client-YYYYMMDD-NNN`.
+- **Live tracking** — positions from the driver's phone (foreground + background) and from **hardware GPS trackers** wired to the trucks (JT/T 808-2013, SLC V1.54), matched to the running task by plate. Two months of track history, thinned after 7 days.
+- **Alarms** — stationary too long, shock, power cut, geofence enter/leave (server-side circular zones), tracker offline (a mains-powered tracker that goes silent). Alarms are de-duplicated, notified with sound, and listed on the Anomalies page.
+- **Work hours** — GPS duration per task, system and manual adjustments with an audit trail, completion photos served through signed URLs.
+- **Vehicles & RUC** — per-vehicle odometer estimate from the trackers and escalating road-user-charge reminders.
+- **Roles** — Admin, Dispatcher, Driver, Client, Monitor (kiosk screen). Every API message is single-language, chosen by the client's `X-Lang` header.
+
+## How it runs in production
+
+```
+Electron desktop console (file://)        ECT Technician app (Expo)
+            │                                        │
+            └──────────────── HTTPS ─────────────────┘
+                               │
+             backend-production-ff66.up.railway.app
+                               │
+               ┌───────────────┴───────────────┐
+               │   one Railway service          │
+               │   HTTP  : container port 8080  │
+               │   JT808 : container port 5023  │
+               └───────────────┬───────────────┘
+                               │
+              Supabase PostgreSQL + Supabase Storage
+
+GPS trackers ──TCP──▶ iriguchi.proxy.rlwy.net:18239 ──▶ container port 5023
 ```
 
-## 数据库初始化
+The HTTP port and the tracker port must differ; the gateway refuses to start on the API port. Details, environment variables and the launch checklist are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
-项目数据库脚本已合并为一份：
+## Repository layout
 
-```text
-database/database.sql
+```
+backend/        NestJS service: auth, users, tasks, work records, GPS, alarms,
+                geofences, vehicles/RUC, notifications, announcements, JT808 gateway
+frontend/       Web Admin Console (React + Vite) and the Electron packaging
+driver-app/     ECT Technician mobile app (Expo Router)
+database/       database.sql (fresh install) and migrations/ (re-runnable scripts)
+docs/           API.md, DEPLOY.md, gps-device-jt808.md (tracker integration), vendor/ (tracker protocol)
+.github/        CI: backend typecheck + tests, web typecheck + locale check + build, app typecheck, Docker build
 ```
 
-使用步骤�?
-1. 登录 [Supabase](https://supabase.com) 并创建项目�?2. 打开 **SQL Editor**�?3. 粘贴并执�?`database/database.sql`�?4. �?**Settings > Database** 复制数据库连接信息�?5. �?**Settings > API** 复制 Project URL �?`service_role` key�?
-脚本会创建：
+## Running locally
 
-- `users`
-- `tasks`
-- `gps_logs`
-- `gps_anomalies`
-- `work_records`
-- `adjustment_logs`
-- `notifications`
-- 相关枚举、索引、更新时间触发器、RLS 开关和默认管理员账�?
-默认管理员：
+Prerequisites: Node.js 22, a Supabase project (or any PostgreSQL 15+), and for the app the Expo tooling.
 
-| 字段 | �?|
-| --- | --- |
-| 邮箱 | `admin@trucksystem.com` |
-| 密码 | 见 `database/database.sql` 顶部注释，**装完请立刻在「系统设置 → 修改密码」改掉** |
-
-上线前务必修改默认密码�?
-## 环境变量
-
-后端需要在 `backend/.env` 中配置：
-
-```env
-DB_HOST=your-supabase-db-host
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your-password
-DB_NAME=postgres
-
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-SUPABASE_STORAGE_BUCKET=truck-uploads
-
-JWT_SECRET=replace-with-a-long-random-string
-FRONTEND_URL=http://localhost:5173
-PORT=3000
-```
-
-生成 `JWT_SECRET`�?
 ```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# backend — copy the example and fill in the database / Supabase values
+cp backend/.env.example backend/.env
+cd backend && npm install && npm run start:dev          # http://localhost:3000, Swagger at /api/docs
+
+# web admin console — the dev server proxies /api to the backend
+cd frontend && npm install && npm run dev               # http://localhost:5173
+#   point the dev console at the live backend instead:
+#   VITE_PROXY_TARGET=https://backend-production-ff66.up.railway.app npm run dev
+
+# mobile app
+cd driver-app && npm install && npx expo start
 ```
 
-前端可选配�?`frontend/.env.local`�?
-```env
-VITE_API_URL=http://localhost:3000
-VITE_GOOGLE_MAPS_KEY=your-google-maps-key
-```
+`start-dev.bat` does the first two steps on Windows.
 
-## 本地启动
+On first start the backend creates or verifies the tables it needs (idempotent DDL with lock timeouts) and refuses to start if a required column is missing. **Change the administrator password on the first login** — the server logs a `SECURITY` warning at every boot while the documented default is still in use.
 
-Windows 一键启动：
+## Tests and checks
 
-```bat
-start-dev.bat
-```
-
-手动启动后端�?
 ```bash
-cd backend
-npm install
-npm run start:dev
+cd backend  && npx tsc --noEmit && npx jest        # 410 tests across 29 suites (19 Oct 2026)
+cd frontend && npx tsc --noEmit && npm run check:locales && npm run build
+cd driver-app && npx tsc --noEmit
 ```
 
-手动启动 Web 前端�?
+The same steps run on every push through GitHub Actions. Bugs that slipped past a test are fixed together with the test, and the test is checked by breaking the code on purpose.
+
+## Building the deliverables
+
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend  && npm run dist:win                       # Windows installer in frontend/release/
+cd driver-app && npx eas-cli build -p android --profile preview   # APK via EAS
 ```
 
-手动启动司机 App�?
-```bash
-cd driver-app
-npm install
-npm run start
-```
+Pushing to `main` deploys the backend to Railway from the repository-root `Dockerfile`.
 
-访问地址�?
-- Web 前端：http://localhost:5173
-- 后端 API：http://localhost:3000
-- Swagger 文档：http://localhost:3000/api/docs
+## Hardware GPS trackers
 
-## 角色权限
+The backend speaks JT/T 808-2013 directly on a TCP port (no third-party tracking platform). Trackers are registered by device number on the GPS Devices page and bound to a vehicle plate; the plate the driver enters when accepting a job is what links the tracker's positions to that job. The integration notes, the alarm bit layout taken from the vendor's document, the decisions behind the gateway's security limits and the field-test findings are in [docs/gps-device-jt808.md](docs/gps-device-jt808.md); the vendor's protocol document is in `docs/vendor/`.
 
-| 角色 | 功能 |
-| --- | --- |
-| Admin | 用户审核、用户管理、任务管理、工时管理、异常管理、通知管理 |
-| Dispatcher | 创建和分配任务、查看用户和工时、处理调度相关流�?|
-| Driver | 查看今日任务、开�?完成任务、GPS 上报、上传完工照片、查看个人信�?|
-| Client | 查看自己的订单、追踪任务状态、查看通知和个人信�?|
+## Documentation
 
-## GPS 异常规则
+- [docs/API.md](docs/API.md) — REST and WebSocket API
+- [docs/DEPLOY.md](docs/DEPLOY.md) — deployment, environment variables, launch checklist
+- [docs/gps-device-jt808.md](docs/gps-device-jt808.md) — tracker integration
+- [ECT ERP Project Proposal.docx](ECT%20ERP%20Project%20Proposal.docx) — original project proposal (July 2026)
 
-| 检测项 | 阈�?| 异常类型 |
-| --- | --- | --- |
-| GPS 超时 | 超过 60 秒无上报 | `gps_disconnect` |
-| 速度异常 | 超过 140 km/h | `speed_anomaly` |
-| 瞬移检测 | 短时间内位置跳跃超过合理速度 | `teleport` |
-| 静止报警 | 设定时长内位移小于 50m（自动升级二次/三次报警） | `stationary` |
+---
 
-> 公告、系统设置（含清空数据密码 / GPS 报警参数）、按角色公告下发等接口见 `docs/API.md`。账户审核通过通知邮件由前端 `mailto:` 调起本机邮箱发送，服务器不发邮件、无需 SMTP。
-
-## 工时计算
-
-```text
-system_duration = end_time - start_time
-gps_duration    = GPS 有效轨迹时长
-final_duration  = system_duration + adjustment_time
-```
-
-管理�?调度员的工时调整会记录在 `adjustment_logs` 表中�?
-## Docker 部署
-
-在项目根目录创建 `.env`�?
-```env
-DB_HOST=your-supabase-db-host
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your-password
-DB_NAME=postgres
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-SUPABASE_STORAGE_BUCKET=truck-uploads
-JWT_SECRET=replace-with-a-long-random-string
-GOOGLE_MAPS_API_KEY=your-google-maps-key
-```
-
-启动�?
-```bash
-docker compose up -d
-```
-
-部署后访问：
-
-```text
-http://localhost
-```
-
-更多部署细节�?`docs/DEPLOY.md`�?
+© 2026 Excellent Construction Ltd. Proprietary software — all rights reserved.

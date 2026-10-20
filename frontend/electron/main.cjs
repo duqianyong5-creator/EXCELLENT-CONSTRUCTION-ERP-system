@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, session } = require('electron');
 const path = require('path');
 
 // 未打包(开发)时为 true：加载 Vite 开发服务器；打包后加载本地 dist。
@@ -57,7 +57,13 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Grant only the permissions the console actually uses (the full-screen map, alarm notifications,
+  // the driver page's geolocation); Electron would otherwise grant every request.
+  const allowed = new Set(['fullscreen', 'notifications', 'geolocation']);
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(allowed.has(permission)));
+  createWindow();
+});
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -1,9 +1,6 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-ARG VITE_GOOGLE_MAPS_KEY
-ARG VITE_API_BASE_URL
-ENV VITE_GOOGLE_MAPS_KEY=$VITE_GOOGLE_MAPS_KEY
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# the console calls the backend through nginx's /api proxy (see nginx.conf); no build-time keys needed
 COPY package*.json ./
 RUN npm ci
 COPY . .

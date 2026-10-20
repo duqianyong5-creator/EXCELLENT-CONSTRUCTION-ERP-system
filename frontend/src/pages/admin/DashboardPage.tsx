@@ -3,7 +3,7 @@ import { Row, Col, Card, Typography, Spin, Button, Modal, Select, Empty, message
 import {
   TruckOutlined, OrderedListOutlined, CheckCircleOutlined,
   ClockCircleOutlined, ReloadOutlined, CalendarOutlined, RocketOutlined,
-  EnvironmentOutlined, DisconnectOutlined,
+  EnvironmentOutlined, DisconnectOutlined, FullscreenOutlined, FullscreenExitOutlined,
 } from '@ant-design/icons';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -76,7 +76,7 @@ function StatCard({ title, value, icon, gradient, accentColor }: StatCardProps) 
   );
 }
 
-function DriverMap({ positions }: { positions: any[] }) {
+function DriverMap({ positions, height = 480, radius = 20 }: { positions: any[]; height?: number | string; radius?: number }) {
   const { t } = useTranslation();
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -176,7 +176,7 @@ function DriverMap({ positions }: { positions: any[] }) {
     }
   }, [positions]);
 
-  return <div ref={mapRef} style={{ width: '100%', height: 480, borderRadius: 20 }} />;
+  return <div ref={mapRef} style={{ width: '100%', height, borderRadius: radius }} />;
 }
 
 export default function DashboardPage() {
@@ -184,6 +184,30 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>({});
   const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // Full-screen map: a dispatcher watching the fleet wants nothing but the map. The overlay covers the
+  // whole viewport and also asks the browser for real full screen; leaving browser full screen (Esc)
+  // fires fullscreenchange, which closes the overlay too.
+  const [mapFullscreen, setMapFullscreen] = useState(false);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mapFullscreen) return;
+    // Only react to fullscreenchange once our own request has landed: closing and reopening quickly
+    // would otherwise deliver the previous overlay's exit event to this one and shut it at once.
+    const el = fullscreenRef.current;
+    let entered = false;
+    el?.requestFullscreen?.()
+      .then(() => { entered = true; })
+      .catch(() => { /* unsupported or refused: the overlay already fills the window */ });
+    const onChange = () => { if (entered && !document.fullscreenElement) setMapFullscreen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMapFullscreen(false); };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('keydown', onKey);
+      if (el && document.fullscreenElement === el) document.exitFullscreen?.().catch(() => {});
+    };
+  }, [mapFullscreen]);
   const [refreshing, setRefreshing] = useState(false);
   const [driverCount, setDriverCount] = useState(0);
   const [deviceStat, setDeviceStat] = useState<{ total: number; offline: number }>({ total: 0, offline: 0 });
@@ -501,9 +525,14 @@ export default function DashboardPage() {
               </div>
             }
             extra={
-              <Button icon={<EnvironmentOutlined />} onClick={openTrackReplay}>
-                {t('dashboard.track_replay')}
-              </Button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button icon={<FullscreenOutlined />} onClick={() => setMapFullscreen(true)}>
+                  {t('dashboard.map_fullscreen')}
+                </Button>
+                <Button icon={<EnvironmentOutlined />} onClick={openTrackReplay}>
+                  {t('dashboard.track_replay')}
+                </Button>
+              </div>
             }
             bordered={false}
             style={{
@@ -515,6 +544,26 @@ export default function DashboardPage() {
           >
             <DriverMap positions={positions} />
           </Card>
+
+          {mapFullscreen && (
+            <div ref={fullscreenRef} role="dialog" aria-modal="true" aria-label={t('dashboard.map_title')} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: '#fff' }}>
+              <DriverMap positions={positions} height="100%" radius={0} />
+              {/* Leaflet owns both top corners (zoom top-left, street/satellite switcher top-right), so our toolbar sits top-centre */}
+              <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 2001, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  background: 'rgba(255,255,255,0.95)', borderRadius: 999, padding: '6px 14px', whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)', fontWeight: 600, fontSize: 14, color: '#1a1a1a',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 5, background: positions.length > 0 ? '#22c55e' : '#d9d9d9' }} />
+                  {positions.length > 0 ? t('dashboard.trucks_moving', { n: positions.length }) : t('dashboard.no_trucks')}
+                </div>
+                <Button autoFocus icon={<FullscreenExitOutlined />} onClick={() => setMapFullscreen(false)} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
+                  {t('dashboard.map_exit_fullscreen')}
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
