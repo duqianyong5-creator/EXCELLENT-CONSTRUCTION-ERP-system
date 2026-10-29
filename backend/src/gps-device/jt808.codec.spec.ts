@@ -1,5 +1,5 @@
 import {
-  parseExtendedTlv, parseIccidMessage, parseTerminalAttributes, normalizeIccid,
+  parseExtendedTlv, parseIccidMessage, parseTerminalAttributes, normalizeIccid, normalizeSimNumber,
   AckResult, MsgId, RegisterResult, ParamId, AlarmBit, ExtAlarmBit,
   decodeAlarms, parseAlarmExt,
   bcdToString, stringToBcd, normalizeDeviceNo,
@@ -535,6 +535,26 @@ describe('SIM ICCID messages', () => {
     expect(parseTerminalAttributes(Buffer.alloc(48)).iccid).toBeNull(); // 全 0 不是 ICCID
     const allF = Buffer.alloc(48); allF.fill(0xff, 34, 44);
     expect(parseTerminalAttributes(allF).iccid).toBeNull();
+  });
+
+  // The number printed on a SIM is not always the ICCID (Chinese IoT cards print a 17-digit card number),
+  // so what an administrator types is held to a looser rule than what the tracker reports.
+  it('normalizeSimNumber accepts the number printed on the card, not only an 89-prefixed ICCID', () => {
+    expect(normalizeSimNumber('64050087230172061')).toBe('64050087230172061');
+    expect(normalizeSimNumber(' 6405 0087-2301 72061 ')).toBe('64050087230172061'); // spaces and hyphens ignored
+    expect(normalizeSimNumber('8986 00f1 1926 f018 5264')).toBe(ICCID); // a real ICCID still passes, upper-cased
+    expect(normalizeSimNumber('1234567890')).toBe('1234567890'); // 10 is the shortest accepted
+    expect(normalizeSimNumber('1' + '2'.repeat(21))).toBe('1' + '2'.repeat(21)); // 22 is the longest
+  });
+
+  it('normalizeSimNumber still refuses what cannot be a card number', () => {
+    expect(normalizeSimNumber('123456789')).toBeNull(); // 9 characters
+    expect(normalizeSimNumber('1' + '2'.repeat(22))).toBeNull(); // 23 characters
+    expect(normalizeSimNumber('898600G11926F0185264')).toBeNull(); // G is not a hex digit
+    expect(normalizeSimNumber('F'.repeat(20))).toBeNull(); // filler, not a number
+    expect(normalizeSimNumber('0'.repeat(17))).toBeNull();
+    expect(normalizeSimNumber('')).toBeNull();
+    expect(normalizeSimNumber(undefined)).toBeNull();
   });
 
   it('normalizeIccid strips spaces, upper-cases and refuses non-ICCIDs', () => {

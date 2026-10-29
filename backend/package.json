@@ -1,6 +1,6 @@
 {
   "name": "truck-dispatch-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "货车司机调度管理系统 - 后端",
   "scripts": {
     "build": "nest build",

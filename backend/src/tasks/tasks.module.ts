@@ -7,9 +7,11 @@ import { WorkRecord } from '../work-records/work-record.entity';
 import { GpsLog } from '../gps/gps-log.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { OperationLogsModule } from '../operation-logs/operation-logs.module';
+import { SystemSettingsModule } from '../system-settings/system-settings.module';
+import { AdjustmentLog } from '../adjustments/adjustment-log.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Task, WorkRecord, GpsLog]), NotificationsModule, OperationLogsModule],
+  imports: [TypeOrmModule.forFeature([Task, WorkRecord, GpsLog, AdjustmentLog]), NotificationsModule, OperationLogsModule, SystemSettingsModule],
   controllers: [TasksController],
   providers: [TasksService],
   exports: [TasksService],

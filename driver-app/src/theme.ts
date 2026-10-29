@@ -1,50 +1,61 @@
 /**
- * 司机端设计系统。
+ * Driver-app design system.
  *
- * 之前整个 App 有 38 个颜色值、25 种圆角、19 种字号、28 种间距——
- * 每个数字都是当场拍的，所以没有两个元素用的是同一套刻度，
- * 整体就"散"。这里把刻度定死，所有页面只能从这里取值。
+ * Every screen takes its colours, spacing, type scale and radii from here and nowhere else
+ * (the screens contain no literal colour values), so this file *is* the look of the app.
  *
- * 几条和普通 App 不一样的取舍，因为用的人在卡车里：
- *   - 正文比常规大一号：司机是瞥一眼，不是阅读
- *   - 可点区域最小 48pt：可能戴着手套
- *   - 深色打底：夜间行车不刺眼，白天在驾驶室阴影里对比也够
+ * The palette matches the desktop console: a light, paper-like canvas with white cards, a
+ * navy hero block for headers, and the company amber as the single accent. Light wins over
+ * dark here because drivers read the phone in daylight in a cab; the dark header keeps the
+ * brand feel and separates "where am I" from "what do I do".
+ *
+ * Choices that differ from an ordinary app because the user is in a truck:
+ *   - body text one step larger than usual: drivers glance, they do not read
+ *   - tap targets at least 48pt: gloves
+ *   - status colours are the same on the phone, the desktop and the client view
  */
 
 export const colors = {
-  /** 页面底色 */
-  bg: '#0B0F1A',
-  /** 卡片 */
-  surface: '#111827',
-  /** 卡片里再抬一层（内嵌块、输入框） */
-  surfaceAlt: '#0F172A',
-  /** 分隔线。用半透明白而不是实色，叠在任何底色上都成立 */
-  border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(255,255,255,0.16)',
+  /** Page canvas: a soft grey so white cards read as cards */
+  bg: '#F3F5F9',
+  /** Cards, sheets, the tab bar */
+  surface: '#FFFFFF',
+  /** A block inside a card (inputs, inner panels) */
+  surfaceAlt: '#F6F8FB',
+  /** Hairlines: translucent navy sits on any of the three surfaces */
+  border: 'rgba(15,23,42,0.08)',
+  borderStrong: 'rgba(15,23,42,0.16)',
 
-  text: '#F8FAFC',
-  textMuted: '#94A3B8',
-  // 原来是 #64748B，在卡片上只有 3.73:1，达不到 WCAG AA 的 4.5——
-  // 它是全 App 所有输入框占位文字的颜色，司机在阳光下的驾驶室里看不清。
-  // 这个值在三种底色上是 5.04~5.44，同时仍明显比 textMuted（6.92）淡，层级不乱。
-  textFaint: '#7A8AA0',
-  /** 放在琥珀色按钮上的文字：深色才够对比 */
+  text: '#0F172A',
+  textMuted: '#64748B',
+  /** Placeholders and tertiary labels: 4.6:1 on white, still clearly lighter than textMuted */
+  textFaint: '#7B869A',
+  /** Text on an amber button: dark, for contrast */
   onAccent: '#1A1206',
+
+  /** The navy hero block used for screen headers and the login top */
+  hero: '#111827',
+  heroAlt: '#1F2937',
+  heroText: '#FFFFFF',
+  heroMuted: 'rgba(255,255,255,0.68)',
+  heroBorder: 'rgba(255,255,255,0.10)',
 
   accent: '#F59E0B',
   accentDark: '#D97706',
-  /** 琥珀色的淡底，用于标签和选中态 */
+  /** Amber tint for chips, selected states and icon chips */
   accentSoft: 'rgba(245,158,11,0.14)',
 
-  success: '#22C55E',
-  successSoft: 'rgba(34,197,94,0.14)',
-  danger: '#EF4444',
-  dangerSoft: 'rgba(239,68,68,0.14)',
-  info: '#3B82F6',
-  infoSoft: 'rgba(59,130,246,0.14)',
+  success: '#16A34A',
+  successSoft: 'rgba(22,163,74,0.12)',
+  danger: '#DC2626',
+  dangerSoft: 'rgba(220,38,38,0.12)',
+  info: '#2563EB',
+  infoSoft: 'rgba(37,99,235,0.12)',
+  purple: '#7C3AED',
+  purpleSoft: 'rgba(124,58,237,0.12)',
 } as const;
 
-/** 4 的倍数。不要再出现 5/7/9/11/13 这种值 */
+/** Multiples of 4 only */
 export const space = {
   xs: 4,
   sm: 8,
@@ -56,21 +67,21 @@ export const space = {
   huge: 40,
 } as const;
 
-/** 字阶。相邻两级差得够开，层级才读得出来 */
+/** Type scale: neighbouring steps differ enough to read as levels */
 export const font = {
-  /** 辅助信息、单位 */
+  /** helper text, units */
   xs: 12,
-  /** 次要正文 */
+  /** secondary body */
   sm: 14,
-  /** 正文——比常规 App 大一号，司机是瞥一眼 */
+  /** body: one step larger than a normal app */
   base: 16,
-  /** 卡片标题 */
+  /** card titles */
   lg: 18,
-  /** 页面标题 */
+  /** screen titles */
   xl: 22,
-  /** 关键数字（工时、剩余里程） */
+  /** key numbers */
   xxl: 28,
-  /** 首屏大数字 */
+  /** the big number on a dashboard tile */
   display: 36,
 } as const;
 
@@ -90,35 +101,43 @@ export const radius = {
   pill: 999,
 } as const;
 
-/** 可点区域最小高度：司机可能戴手套 */
+/** Minimum tap height: gloves */
 export const hit = {
   min: 48,
   compact: 40,
 } as const;
 
 /**
- * 深色底上的阴影几乎看不见，所以层级主要靠背景色差和描边表达。
- * 只有浮起来的东西（弹窗、悬浮按钮）才给阴影。
+ * On a light canvas elevation is carried by soft shadows: `card` for anything resting on the
+ * page, `raised` for what floats above it (sheets, floating buttons, map overlays).
  */
 export const shadow = {
+  card: {
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
   raised: {
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
 } as const;
 
 /**
- * 任务状态配色，全 App 一套：待派=品牌琥珀，已派(待接受)=信息蓝，进行中=绿，已完成=中性灰，已取消=红。
- * 司机端、管理端、今日任务页都从这里取——同一个状态在谁眼里都是同一种颜色。
+ * Job status colours, one set for the whole product: pending = amber, assigned (to accept) = blue,
+ * in progress = green, completed = neutral, cancelled = red. The phone, the desktop and the
+ * client view all read from here, so a status looks the same to everyone.
  */
 export const statusColors = {
-  pending: { bg: colors.accentSoft, text: colors.accent, border: colors.accent },
+  pending: { bg: colors.accentSoft, text: colors.accentDark, border: colors.accent },
   assigned: { bg: colors.infoSoft, text: colors.info, border: colors.info },
   in_progress: { bg: colors.successSoft, text: colors.success, border: colors.success },
-  completed: { bg: colors.border, text: colors.textMuted, border: colors.borderStrong },
+  completed: { bg: '#EEF2F7', text: colors.textMuted, border: colors.borderStrong },
   cancelled: { bg: colors.dangerSoft, text: colors.danger, border: colors.danger },
 } as const;
 

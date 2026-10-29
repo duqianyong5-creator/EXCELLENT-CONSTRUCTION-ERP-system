@@ -3,24 +3,57 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
+import type { TextInputProps } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { authApi } from '../src/api';
 import { useLang } from '../src/i18n';
 import { showAppAlert } from '../src/AppDialog';
-import { colors, space, font, weight, radius, hit } from '../src/theme';
+import { colors, space, font, weight, radius, hit, shadow } from '../src/theme';
 
-function Field({ icon, name, focused, setFocused, ...props }: any) {
+/** How far the form card climbs over the hero's bottom edge */
+const CARD_OVERLAP = space.xxxl;
+
+/** Navy header shared by the form and the success state: the login shell, with the screen title where the brand sits */
+function Hero({ title, subtitle, topInset }: { title: string; subtitle: string; topInset: number }) {
   return (
-    <View style={[styles.inputWrap, focused === name && styles.inputWrapFocused]}>
-      <Ionicons name={icon} size={20} color={focused === name ? colors.accent : colors.textFaint} />
-      <TextInput
-        style={styles.input}
-        placeholderTextColor={colors.textFaint}
-        onFocus={() => setFocused(name)}
-        onBlur={() => setFocused(null)}
-        {...props}
-      />
+    <View style={[styles.hero, { paddingTop: topInset + space.xl }]}>
+      <View style={styles.logoTile}>
+        <Image source={require('../assets/log.png')} style={styles.logo} resizeMode="contain" />
+      </View>
+      <Text style={styles.heroTitle}>{title}</Text>
+      <Text style={styles.heroSubtitle}>{subtitle}</Text>
+    </View>
+  );
+}
+
+type FieldProps = TextInputProps & {
+  name: string;
+  label: string;
+  focused: string | null;
+  setFocused: (name: string | null) => void;
+  /** Trailing controls inside the field, such as the eye button */
+  children?: React.ReactNode;
+};
+
+/** A caption label over a 48pt field on the inner surface; focus is the only time the accent appears */
+function Field({ name, label, focused, setFocused, children, ...props }: FieldProps) {
+  const active = focused === name;
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputWrap, active && styles.inputWrapFocused]}>
+        <TextInput
+          style={styles.input}
+          placeholderTextColor={colors.textFaint}
+          onFocus={() => setFocused(name)}
+          onBlur={() => setFocused(null)}
+          {...props}
+        />
+        {children}
+      </View>
     </View>
   );
 }
@@ -28,6 +61,7 @@ function Field({ icon, name, focused, setFocused, ...props }: any) {
 export default function RegisterScreen() {
   const router = useRouter();
   const { t } = useLang();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -62,77 +96,99 @@ export default function RegisterScreen() {
     }
   };
 
+  const hero = <Hero title={t('reg.title')} subtitle={t('reg.subtitle')} topInset={insets.top} />;
+  const bodyStyle = [styles.body, { paddingBottom: insets.bottom + space.lg }];
+
   if (success) {
     return (
-      <View style={[styles.bg, { justifyContent: 'center', padding: space.xxl }]}>
-        <View style={styles.card}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark" size={44} color={colors.text} />
+      <View style={styles.bg}>
+        <StatusBar style="light" />
+        <View style={styles.heroBackdrop} />
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {hero}
+          <View style={bodyStyle}>
+            <View style={styles.card}>
+              <View style={styles.successIcon}>
+                <Ionicons name="checkmark" size={32} color={colors.success} />
+              </View>
+              <Text style={styles.successTitle}>{t('reg.successTitle')}</Text>
+              <Text style={styles.successDesc}>{t('reg.successDesc')}</Text>
+              <TouchableOpacity style={styles.submitBtn} onPress={() => router.replace('/login')} activeOpacity={0.85}>
+                <Text style={styles.submitText}>{t('reg.backLogin')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.title}>{t('reg.successTitle')}</Text>
-          <Text style={styles.subtitle}>{t('reg.successDesc')}</Text>
-          <TouchableOpacity style={styles.submitBtn} onPress={() => router.replace('/login')} activeOpacity={0.85}>
-            <Text style={styles.submitText}>{t('reg.backLogin')}</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={styles.bg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.logoPlate}>
-              <Image source={require('../assets/log.png')} style={styles.logo} resizeMode="contain" />
+    <View style={styles.bg}>
+      <StatusBar style="light" />
+      {/* Navy behind the top of the scroll view, so an over-scroll at the top stays navy rather than grey */}
+      <View style={styles.heroBackdrop} />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {hero}
+          <View style={bodyStyle}>
+            {/* Form card, floating over the hero's bottom edge */}
+            <View style={styles.card}>
+              <Field label={t('login.account')} placeholder={t('reg.usernamePh')} value={form.username}
+                onChangeText={(v: string) => set('username', v)} name="username" focused={focused} setFocused={setFocused} autoCapitalize="none" />
+              <Field label={t('profile.email')} placeholder={t('reg.emailPh')} value={form.email}
+                onChangeText={(v: string) => set('email', v)} name="email" focused={focused} setFocused={setFocused} keyboardType="email-address" autoCapitalize="none" />
+              <Field label={t('profile.name')} placeholder={t('reg.fullNamePh')} value={form.fullName}
+                onChangeText={(v: string) => set('fullName', v)} name="fullName" focused={focused} setFocused={setFocused} />
+              <Field label={t('profile.phone')} placeholder={t('reg.phonePh')} value={form.phone}
+                onChangeText={(v: string) => set('phone', v)} name="phone" focused={focused} setFocused={setFocused} keyboardType="phone-pad" />
+
+              {/* Role: a segmented control on the field surface; the chosen segment is ink, amber stays with the primary button */}
+              <View style={styles.field}>
+                <Text style={styles.label}>{t('reg.role')}</Text>
+                <View style={styles.segment}>
+                  <TouchableOpacity
+                    style={[styles.segmentBtn, role === 'driver' && styles.segmentBtnActive]}
+                    onPress={() => setRole('driver')}
+                    activeOpacity={0.85}
+                    hitSlop={{ top: space.xs, bottom: space.xs }}
+                  >
+                    <Text style={[styles.segmentText, role === 'driver' && styles.segmentTextActive]}>{t('reg.roleDriver')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.segmentBtn, role === 'client' && styles.segmentBtnActive]}
+                    onPress={() => setRole('client')}
+                    activeOpacity={0.85}
+                    hitSlop={{ top: space.xs, bottom: space.xs }}
+                  >
+                    <Text style={[styles.segmentText, role === 'client' && styles.segmentTextActive]}>{t('reg.roleClient')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <Field label={t('login.password')} placeholder={t('reg.passwordPh')} value={form.password}
+                onChangeText={(v: string) => set('password', v)} name="password" focused={focused} setFocused={setFocused} secureTextEntry={!showPassword}>
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textFaint} />
+                </TouchableOpacity>
+              </Field>
+
+              <TouchableOpacity style={[styles.submitBtn, loading && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
+                {loading ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.submitText}>{t('reg.submit')}</Text>}
+              </TouchableOpacity>
             </View>
-            <Text style={styles.title}>{t('reg.title')}</Text>
-            <Text style={styles.subtitle}>{t('reg.subtitle')}</Text>
+
+            {/* Secondary action as a text link, as on the login screen */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>{t('reg.haveAccount')}</Text>
+              <TouchableOpacity style={styles.footerBtn} onPress={() => router.replace('/login')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={styles.footerLink}>{t('reg.backLogin')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <Field icon="person-outline" placeholder={t('reg.usernamePh')} value={form.username}
-            onChangeText={(v: string) => set('username', v)} name="username" focused={focused} setFocused={setFocused} autoCapitalize="none" />
-          <Field icon="mail-outline" placeholder={t('reg.emailPh')} value={form.email}
-            onChangeText={(v: string) => set('email', v)} name="email" focused={focused} setFocused={setFocused} keyboardType="email-address" autoCapitalize="none" />
-          <Field icon="id-card-outline" placeholder={t('reg.fullNamePh')} value={form.fullName}
-            onChangeText={(v: string) => set('fullName', v)} name="fullName" focused={focused} setFocused={setFocused} />
-          <Field icon="call-outline" placeholder={t('reg.phonePh')} value={form.phone}
-            onChangeText={(v: string) => set('phone', v)} name="phone" focused={focused} setFocused={setFocused} keyboardType="phone-pad" />
-
-          <Text style={styles.roleLabel}>{t('reg.role')}</Text>
-          <View style={styles.roleRow}>
-            <TouchableOpacity style={[styles.roleBtn, role === 'driver' && styles.roleBtnActive]} onPress={() => setRole('driver')}>
-              <Text style={[styles.roleText, role === 'driver' && styles.roleTextActive]}>{t('reg.roleDriver')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.roleBtn, role === 'client' && styles.roleBtnActive]} onPress={() => setRole('client')}>
-              <Text style={[styles.roleText, role === 'client' && styles.roleTextActive]}>{t('reg.roleClient')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.inputWrap, focused === 'password' && styles.inputWrapFocused, { marginTop: space.lg }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={focused === 'password' ? colors.accent : colors.textFaint} />
-            <TextInput style={styles.input} placeholder={t('reg.passwordPh')} placeholderTextColor={colors.textFaint}
-              value={form.password} onChangeText={(v) => set('password', v)} secureTextEntry={!showPassword}
-              onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
-            <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(v => !v)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textFaint} />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={[styles.submitBtn, loading && styles.submitBtnDisabled]} onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
-            {loading ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.submitText}>{t('reg.submit')}</Text>}
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('reg.haveAccount')}</Text>
-            <TouchableOpacity style={styles.footerBtn} onPress={() => router.replace('/login')}>
-              <Text style={styles.footerLink}>{t('reg.backLogin')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -141,69 +197,201 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  flex: {
+    flex: 1,
+  },
   scroll: {
     flexGrow: 1,
+  },
+  heroBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '35%',
+    backgroundColor: colors.hero,
+  },
+  hero: {
+    backgroundColor: colors.hero,
+    alignItems: 'center',
+    paddingHorizontal: space.xxl,
+    // Room for the card that climbs over the bottom edge
+    paddingBottom: CARD_OVERLAP + space.lg,
+  },
+  logoTile: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: space.xxl,
+    marginBottom: space.lg,
+  },
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+  },
+  heroTitle: {
+    fontSize: font.xl,
+    fontWeight: weight.bold,
+    color: colors.heroText,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: font.sm,
+    color: colors.heroMuted,
+    marginTop: space.xs,
+    textAlign: 'center',
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: space.lg,
+    backgroundColor: colors.bg,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: space.xl,
     width: '100%',
     maxWidth: 440,
     alignSelf: 'center',
-    // 深色底上阴影看不见，卡片靠底色差 + 一根发丝描边抬起来（和登录页同一处理）
+    marginTop: -CARD_OVERLAP,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: space.xl,
+    ...shadow.card,
+  },
+  field: {
+    marginBottom: space.lg,
+  },
+  label: {
+    fontSize: font.xs,
+    fontWeight: weight.medium,
+    color: colors.textFaint,
+    letterSpacing: 0.2,
+    marginBottom: space.xs,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: hit.min,
+    paddingHorizontal: space.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    // Clips the input (and its web focus ring) inside the border, so the amber focus border stays whole
+    overflow: 'hidden',
   },
-  header: { alignItems: 'center', marginBottom: space.xxl },
-  // logo 本身是深色图：和登录页一样垫一块浅色底板，否则在深色卡片上几乎看不见
-  logoPlate: {
-    width: 88, height: 88, borderRadius: radius.xl, backgroundColor: colors.text,
-    alignItems: 'center', justifyContent: 'center', marginBottom: space.md,
+  inputWrapFocused: {
+    borderColor: colors.accent,
+    backgroundColor: colors.surface,
   },
-  logo: { width: 80, height: 80, borderRadius: radius.lg },
-  title: { fontSize: font.xl, fontWeight: weight.heavy, color: colors.text, textAlign: 'center' },
-  subtitle: { fontSize: font.sm, color: colors.textMuted, marginTop: space.xs, textAlign: 'center' },
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: space.lg, marginBottom: space.lg, backgroundColor: colors.surfaceAlt,
-    minHeight: hit.min,
+  input: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
+    paddingVertical: 0,
+    fontSize: font.base,
+    color: colors.text,
+    // The amber border on the wrapper shows focus; on web the browser ring is painted in the
+    // focused wrapper colour so it disappears instead of drawing a second, black ring
+    outlineWidth: 0,
+    outlineColor: colors.surface,
   },
-  inputWrapFocused: { borderColor: colors.accent, backgroundColor: colors.bg },
-  input: { flex: 1, minWidth: 0, paddingVertical: space.md, fontSize: font.base, color: colors.text },
   eyeBtn: {
     width: hit.min,
     height: hit.min,
     alignItems: 'center',
     justifyContent: 'center',
-    // 触区撑到 48，但视觉上仍贴着右边距
+    // A 48pt tap target that still sits flush with the right edge of the input
     marginRight: -space.md,
   },
-  roleLabel: { fontSize: font.sm, color: colors.textMuted, fontWeight: weight.semibold, marginBottom: space.sm },
-  roleRow: { flexDirection: 'row', gap: space.md },
-  roleBtn: {
-    flex: 1, paddingVertical: space.md, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center',
-    minHeight: hit.min,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt,
+  segment: {
+    flexDirection: 'row',
+    gap: space.xs,
+    height: hit.min,
+    padding: space.xs,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  roleBtnActive: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  roleText: { fontSize: font.sm, color: colors.textMuted, fontWeight: weight.semibold },
-  roleTextActive: { color: colors.accent },
+  segmentBtn: {
+    flex: 1,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.text,
+  },
+  segmentText: {
+    fontSize: font.sm,
+    color: colors.textMuted,
+    fontWeight: weight.medium,
+  },
+  segmentTextActive: {
+    color: colors.surface,
+    fontWeight: weight.semibold,
+  },
   submitBtn: {
-    minHeight: hit.min, paddingVertical: space.lg, borderRadius: radius.md, backgroundColor: colors.accent,
-    alignItems: 'center', justifyContent: 'center', marginTop: space.xl,
+    height: hit.min,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: space.xs,
   },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitText: { color: colors.onAccent, fontSize: font.lg, fontWeight: weight.heavy, letterSpacing: 0.3 },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: space.sm, marginTop: space.lg },
-  footerText: { color: colors.textFaint, fontSize: font.sm },
-  footerBtn: { minHeight: hit.min, justifyContent: 'center', paddingHorizontal: space.sm },
-  footerLink: { color: colors.accent, fontSize: font.sm, fontWeight: weight.bold },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitText: {
+    color: colors.onAccent,
+    fontSize: font.base,
+    fontWeight: weight.semibold,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: space.xs,
+    marginTop: space.md,
+  },
+  footerText: {
+    color: colors.textMuted,
+    fontSize: font.sm,
+  },
+  footerBtn: {
+    minHeight: hit.min,
+    justifyContent: 'center',
+    paddingHorizontal: space.sm,
+  },
+  footerLink: {
+    color: colors.accentDark,
+    fontSize: font.sm,
+    fontWeight: weight.semibold,
+  },
   successIcon: {
-    width: 72, height: 72, borderRadius: radius.pill, backgroundColor: colors.success,
-    alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: space.lg,
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.successSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: space.lg,
+  },
+  successTitle: {
+    fontSize: font.lg,
+    fontWeight: weight.semibold,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  successDesc: {
+    fontSize: font.sm,
+    lineHeight: 20,
+    color: colors.textMuted,
+    marginTop: space.sm,
+    marginBottom: space.xl,
+    textAlign: 'center',
   },
 });

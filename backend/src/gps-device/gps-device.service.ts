@@ -7,7 +7,7 @@ import { GpsService } from '../gps/gps.service';
 import { RucService } from '../ruc/ruc.service';
 import { DeviceAlarmService } from './device-alarm.service';
 import { haversineKm } from '../gps/geo.util';
-import { normalizeDeviceNo, normalizeIccid, Position } from './jt808.codec';
+import { normalizeDeviceNo, normalizeIccid, normalizeSimNumber, Position } from './jt808.codec';
 import { ErrorCode } from '../common/i18n/messages';
 import { normalizePlate } from './plate.util';
 
@@ -133,11 +133,11 @@ export class GpsDeviceService {
     return plate;
   }
 
-  /** 管理员手填的 ICCID：空 = 清掉；填了就必须像一个 ICCID */
+  /** 管理员手填的 SIM 卡号：空 = 清掉；填了就必须像卡上印的号码（规则比设备自报的 ICCID 宽，见 normalizeSimNumber） */
   private cleanIccid(value: string | undefined | null): string | null {
     const raw = String(value ?? '').trim();
     if (!raw) return null;
-    const iccid = normalizeIccid(raw);
+    const iccid = normalizeSimNumber(raw);
     if (!iccid) throw new BadRequestException(ErrorCode.DEVICE_ICCID_INVALID);
     return iccid;
   }
@@ -246,6 +246,14 @@ export class GpsDeviceService {
    */
   private noteIccid(device: GpsDevice, iccid: string | undefined, patch: Partial<GpsDevice>): void {
     if (!iccid || iccid === device.iccid) return;
+    // What an admin typed from the card may be the printed card number rather than the ICCID. The first real
+    // ICCID from the tracker replaces it quietly instead of counting as a SIM swap.
+    if (device.iccid && !normalizeIccid(device.iccid)) {
+      this.logger.log(`${device.deviceNo} reports SIM ICCID ${maskIccid(iccid)} (replaces the hand-typed card number)`);
+      patch.iccid = iccid;
+      device.iccid = iccid;
+      return;
+    }
     const now = Date.now();
     let s = this.simChanges.get(device.deviceNo);
     if (!s || now - s.windowStart > SIM_CHANGE_WINDOW_MS) s = { windowStart: now, count: 0, muted: false };

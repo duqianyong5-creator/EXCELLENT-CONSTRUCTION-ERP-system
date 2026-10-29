@@ -421,6 +421,15 @@ describe('GpsDeviceService: SIM ICCID', () => {
     expect(none.iccid).toBeNull();
   });
 
+  it('accepts the 17-digit number printed on a Chinese IoT SIM when typed by hand', async () => {
+    const { service } = build({ device: null });
+    const created = await service.create({ deviceNo: '51160004464', iccid: '6405 0087 2301 72061' });
+    expect(created.iccid).toBe('64050087230172061');
+    const { service: s2, repo } = build({ device: { id: 'dev1', deviceNo: '51160004464', vehiclePlate: 'ABC 123', enabled: true, iccid: null } });
+    await s2.update('dev1', { iccid: '64050087230172061' });
+    expect((repo.save.mock.calls[0] as any)[0].iccid).toBe('64050087230172061');
+  });
+
   it('update(): omitted leaves the ICCID alone, null clears it', async () => {
     const { service, repo } = build({ device: { id: 'dev1', deviceNo: '51160004464', vehiclePlate: 'ABC 123', enabled: true, iccid: ICCID } });
     await service.update('dev1', { name: 'truck 1' });

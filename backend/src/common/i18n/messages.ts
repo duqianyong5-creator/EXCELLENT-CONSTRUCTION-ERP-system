@@ -111,8 +111,8 @@ const MESSAGES: Record<string, Record<Lang, string>> = {
     en: 'Device number must be 5-20 digits',
   },
   [ErrorCode.DEVICE_ICCID_INVALID]: {
-    zh: 'ICCID 须以 89 开头、共 18~22 位数字或 A~F 字母（印在 SIM 卡上，通常 20 位）',
-    en: 'ICCID must start with 89 and be 18-22 digits or letters A-F (printed on the SIM, usually 20 characters)',
+    zh: 'SIM 卡号须为 10~22 位数字或 A~F 字母（照卡上印的号码填，空格和连字符可不填）',
+    en: 'SIM number must be 10-22 digits or letters A-F (copy the number printed on the card; spaces and hyphens are ignored)',
   },
   [ErrorCode.DEVICE_NO_EXISTS]: {
     zh: '该设备号已登记',

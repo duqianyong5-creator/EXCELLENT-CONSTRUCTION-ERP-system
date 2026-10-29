@@ -10,6 +10,8 @@ export type MapPos = {
   latitude: number;
   longitude: number;
   speed?: number;
+  /** Replaces the speed in the pin label (used for "Offline" trackers at their last fix) */
+  labelSuffix?: string;
 };
 
 // 转义,防止司机昵称把 HTML 注入到 WebView 标记里
@@ -32,11 +34,9 @@ function buildHtml(topInset: number, bottomInset: number, labels: MapLabels): st
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style id="insets">.leaflet-top{top:${topInset}px;}.leaflet-bottom{bottom:${bottomInset}px;}</style>
 <style>
   html,body,#map{height:100%;width:100%;margin:0;padding:0;background:${colors.bg};}
-  /* 把控件从屏幕最顶/最底挪开，避免被状态栏/刘海/手势条挡住、点不到 */
-  .leaflet-top{top:${topInset}px;}
-  .leaflet-bottom{bottom:${bottomInset}px;}
   /* 控件同时压在卫星影像和街道瓦片上，两种底都得读得清，所以一律给实心底色 + 描边，不用半透明 */
   .leaflet-control-layers,.leaflet-bar,
   .leaflet-touch .leaflet-control-layers,.leaflet-touch .leaflet-bar{
@@ -64,8 +64,6 @@ function buildHtml(topInset: number, bottomInset: number, labels: MapLabels): st
     width:${hit.min}px;
     height:${hit.min}px;
     background-color:transparent;
-    /* 图层按钮是一张深色贴图，落在深色面板上会糊掉，反色后才看得见 */
-    filter:invert(1);
   }
   .leaflet-control-layers-expanded{padding:${space.sm}px ${space.md}px;background:${colors.surface};color:${colors.text};}
   .leaflet-control-layers label{
@@ -112,8 +110,13 @@ function buildHtml(topInset: number, bottomInset: number, labels: MapLabels): st
   // 车队在奥克兰。原来是 [35,105] 缩放 4——中国地理中心；
   // 还没有车辆上报位置时，调度员打开定位页看到的就是整个中国
   var map = L.map('map', { zoomControl: false }).setView([-36.8485, 174.7633], 11);
-  // 缩放放到左下角，远离顶部状态栏；右上角放图层切换
+  // Zoom bottom-left, layers top-right: the floating header owns the top-left, the refresh button the bottom-right
   L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  // The screen measures its floating header and pushes the controls below it without reloading the map
+  window.rnSetInsets = function (top, bottom) {
+    var s = document.getElementById('insets');
+    if (s) s.textContent = '.leaflet-top{top:' + top + 'px;}.leaflet-bottom{bottom:' + bottom + 'px;}';
+  };
   // 免费底图：街道(OSM) + 卫星(Esri)，右上角可切换，均无需 API Key
   var street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '© OpenStreetMap'
@@ -127,17 +130,23 @@ function buildHtml(topInset: number, bottomInset: number, labels: MapLabels): st
   baseLayers[LBL.satellite] = satellite;
   L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
   var markers = {};
+  var focusedId = null;
+  function fitAll(pts) {
+    if (pts.length === 1) { map.setView(pts[0], 13); }
+    else if (pts.length > 1) { map.fitBounds(pts, { padding: [60, 60] }); }
+  }
   window.rnRender = function (list) {
     for (var k in markers) { map.removeLayer(markers[k]); }
     markers = {};
     var pts = [];
     list.forEach(function (p) {
+      var text = p.suffix ? p.name + ' · ' + p.suffix : (p.speed != null ? p.name + ' · ' + p.speed + ' km/h' : p.name);
       // 卡车图标原来只靠 drop-shadow 撑在瓦片上，亮底影像里几乎糊掉，改成实心圆底盘
       var label = '<div style="display:flex;flex-direction:column;align-items:center">'
         + '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:${font.xl}px;line-height:1;border-radius:${radius.pill}px;background:${colors.surface};border:1px solid ${colors.borderStrong};box-shadow:${overlayShadow}">🚛</div>'
-        + '<div style="margin-top:${space.xs}px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:${colors.surface};color:${colors.text};border:1px solid ${colors.borderStrong};border-radius:${radius.sm}px;padding:${space.xs}px ${space.sm}px;font-size:${font.xs}px;font-weight:${weight.bold};box-shadow:${overlayShadow}">' + p.name + '</div>'
+        + '<div style="margin-top:${space.xs}px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:${colors.surface};color:${colors.text};border:1px solid ${colors.borderStrong};border-radius:${radius.sm}px;padding:${space.xs}px ${space.sm}px;font-size:${font.xs}px;font-weight:${weight.semibold};box-shadow:${overlayShadow}">' + text + '</div>'
         + '</div>';
-      var m = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: label, iconSize: [130, 48], iconAnchor: [65, 16] }) });
+      var m = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: label, iconSize: [180, 48], iconAnchor: [90, 16] }) });
       m.bindPopup(
         '<div style="font-weight:${weight.bold};font-size:${font.sm}px;margin-bottom:${space.xs}px;color:${colors.text}">' + p.name + '</div>'
         + '<div style="font-size:${font.xs}px;color:${colors.textMuted}">' + LBL.speed + ' <b style="color:${colors.accent}">' + (p.speed != null ? p.speed : 0) + ' km/h</b></div>'
@@ -147,12 +156,21 @@ function buildHtml(topInset: number, bottomInset: number, labels: MapLabels): st
       markers[p.id] = m;
       pts.push([p.lat, p.lng]);
     });
-    if (pts.length === 1) { map.setView(pts[0], 13); }
-    else if (pts.length > 1) { map.fitBounds(pts, { padding: [40, 40] }); }
+    // A followed vehicle keeps the camera; otherwise every refresh shows the whole fleet
+    if (focusedId && markers[focusedId]) { map.panTo(markers[focusedId].getLatLng()); }
+    else { focusedId = null; fitAll(pts); }
   };
   window.rnFocus = function (id) {
     var m = markers[id];
-    if (m) { map.setView(m.getLatLng(), 14); m.openPopup(); }
+    focusedId = id;
+    if (m) { map.setView(m.getLatLng(), 15); m.openPopup(); }
+  };
+  window.rnFitAll = function () {
+    focusedId = null;
+    map.closePopup();
+    var pts = [];
+    for (var k in markers) { pts.push(markers[k].getLatLng()); }
+    fitAll(pts);
   };
 </script>
 </body>
@@ -169,15 +187,22 @@ export default function LeafletMap({ positions, focusId, style, topInset = 0, bo
   const ref = useRef<WebView>(null);
   const { t } = useLang();
   const [ready, setReady] = useState(false);
+  // The HTML is built once per language; inset changes are injected so the map never reloads mid-use.
+  const initialInsets = useRef({ top: topInset, bottom: bottomInset });
   const html = React.useMemo(
-    () => buildHtml(topInset, bottomInset, {
+    () => buildHtml(initialInsets.current.top, initialInsets.current.bottom, {
       street: t('map.street'),
       satellite: t('map.satellite'),
       speed: t('map.speed'),
       coords: t('map.coords'),
     }),
-    [topInset, bottomInset, t],
+    [t],
   );
+
+  useEffect(() => {
+    if (!ready || !ref.current) return;
+    ref.current.injectJavaScript(`window.rnSetInsets && window.rnSetInsets(${Math.round(topInset)}, ${Math.round(bottomInset)}); true;`);
+  }, [ready, topInset, bottomInset]);
 
   useEffect(() => {
     if (!ready || !ref.current) return;
@@ -189,14 +214,15 @@ export default function LeafletMap({ positions, focusId, style, topInset = 0, bo
         lng: p.longitude,
         name: esc(p.driverName || t('d.driverFallback')),
         speed: p.speed != null ? Math.round(p.speed) : null,
+        suffix: p.labelSuffix ? esc(p.labelSuffix) : null,
       }));
     ref.current.injectJavaScript(`window.rnRender && window.rnRender(${JSON.stringify(data)}); true;`);
   }, [ready, positions, t]);
 
   useEffect(() => {
-    if (ready && focusId && ref.current) {
-      ref.current.injectJavaScript(`window.rnFocus && window.rnFocus(${JSON.stringify(focusId)}); true;`);
-    }
+    if (!ready || !ref.current) return;
+    if (focusId) ref.current.injectJavaScript(`window.rnFocus && window.rnFocus(${JSON.stringify(focusId)}); true;`);
+    else ref.current.injectJavaScript('window.rnFitAll && window.rnFitAll(); true;');
   }, [ready, focusId]);
 
   return (

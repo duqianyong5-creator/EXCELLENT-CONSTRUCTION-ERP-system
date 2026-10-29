@@ -11,7 +11,6 @@ import { View, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { LangProvider } from '../src/i18n';
 import AppDialog from '../src/AppDialog';
-import '../src/backgroundLocation'; // 注册后台定位任务
 import { registerTaskNotifications, checkAndNotify, checkAnnouncementsAndNotify } from '../src/notifications';
 import { connectSocket, disconnectSocket } from '../src/socket';
 import { colors } from '../src/theme';

@@ -17,6 +17,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   ruc_warn_km: '500',              // RUC 路税：剩余公里低于此值开始提醒
   ruc_critical_km: '200',          // RUC 路税：剩余公里低于此值紧急提醒
   ruc_warn_days: '3',              // RUC 路税：预计多少天内用完就提醒
+  work_adjust_minutes: '30',       // minutes added to every work record when a job is completed (System Settings, "default time adjustment")
 };
 
 @Injectable()
@@ -54,6 +55,13 @@ export class SystemSettingsService {
     const entries = Object.entries(values).filter(([k]) => k in SETTING_DEFAULTS);
     for (const [key, raw] of entries) {
       let value = String(raw ?? '');
+      // payroll-relevant: whole minutes between 0 and 480 only
+      if (key === 'work_adjust_minutes') {
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0 || n > 480) {
+          throw new BadRequestException('work_adjust_minutes must be a whole number of minutes between 0 and 480');
+        }
+      }
       // 清空数据密码永不明文落库：存 bcrypt 哈希。空串表示清除密码。
       if (key === 'clear_data_password' && value) {
         value = await bcrypt.hash(value, 12);

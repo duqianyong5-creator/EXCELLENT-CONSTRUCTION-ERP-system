@@ -82,6 +82,8 @@ export const gpsApi = {
     accuracy?: number;
   }) => api.post('/gps/upload', data),
   positions: () => api.get('/gps/positions'),
+  // a client's own in-progress jobs only, scoped on the server
+  clientPositions: () => api.get('/gps/client-positions'),
   driverPosition: (driverId: string) => api.get(`/gps/driver/${driverId}/position`),
 };
 
@@ -97,6 +99,8 @@ export const usersApi = {
 export const gpsDevicesApi = {
   /** 已登记车牌（接单时快选，避免手输和车载定位器对不上） */
   plates: () => api.get('/gps-devices/plates'),
+  /** every registered tracker with its online flag, last fix, speed and current job (staff only) */
+  list: () => api.get('/gps-devices'),
 };
 
 export const workRecordsApi = {

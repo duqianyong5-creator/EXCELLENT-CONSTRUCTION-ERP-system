@@ -47,7 +47,9 @@ export const settings: LocaleBundle = {
 
     // 工时调整默认值
     'settings.adjust_title': '工时调整默认值',
-    'settings.adjust_desc': '自动给每条工时记录增加的时长（记为系统调整，计入最终工时 = GPS工时 + 此值）。',
+    'settings.adjust_desc': '任务完成时自动给工时记录增加的时长（记为系统调整，最终工时 = 实际工时 + 此值；只影响之后完成的任务）。',
+    'settings.adjust_0': '不加（0 分钟）',
+    'settings.adjust_none': '不加',
     'settings.adjust_30': '半小时（30分钟）',
     'settings.adjust_60': '一小时（60分钟）',
     'settings.adjust_half_hour': '半小时',
@@ -125,7 +127,9 @@ export const settings: LocaleBundle = {
     'settings.lang_en': 'English',
 
     'settings.adjust_title': 'Default time adjustment',
-    'settings.adjust_desc': 'Time added automatically to every work record (logged as a system adjustment, so final hours = GPS hours + this value).',
+    'settings.adjust_desc': 'Time added to every work record when a job is completed (logged as a system adjustment, so final hours = measured hours + this value; applies to jobs completed from now on).',
+    'settings.adjust_0': 'None (0 min)',
+    'settings.adjust_none': 'none',
     'settings.adjust_30': 'Half an hour (30 min)',
     'settings.adjust_60': 'One hour (60 min)',
     'settings.adjust_half_hour': 'half an hour',

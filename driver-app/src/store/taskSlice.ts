@@ -11,7 +11,6 @@ interface ActiveTask {
 interface TaskState {
   activeTaskId: string | null;
   activeTask: ActiveTask | null;
-  isGpsRunning: boolean;
 }
 
 const taskSlice = createSlice({
@@ -19,18 +18,14 @@ const taskSlice = createSlice({
   initialState: {
     activeTaskId: null,
     activeTask: null,
-    isGpsRunning: false,
   } as TaskState,
   reducers: {
     setActiveTask(state, action: PayloadAction<ActiveTask | null>) {
       state.activeTask = action.payload;
       state.activeTaskId = action.payload?.id ?? null;
     },
-    setGpsRunning(state, action: PayloadAction<boolean>) {
-      state.isGpsRunning = action.payload;
-    },
   },
 });
 
-export const { setActiveTask, setGpsRunning } = taskSlice.actions;
+export const { setActiveTask } = taskSlice.actions;
 export default taskSlice.reducer;

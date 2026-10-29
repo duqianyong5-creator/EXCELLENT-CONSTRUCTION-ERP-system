@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   TextInput, ScrollView, ActivityIndicator,
 } from 'react-native';
+import type { TextInputProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { usersApi } from '../../src/api';
@@ -13,7 +15,50 @@ import { logout, updateUser } from '../../src/store/authSlice';
 import type { RootState } from '../../src/store';
 import { useLang } from '../../src/i18n';
 import { showAppAlert } from '../../src/AppDialog';
-import { colors, space, font, weight, radius, hit } from '../../src/theme';
+import { colors, space, font, weight, radius, hit, shadow } from '../../src/theme';
+
+/** How far the first card climbs over the hero's bottom edge */
+const CARD_OVERLAP = space.xl;
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** Card title row: a 32px amber icon chip beside a quiet title */
+function SectionHeader({ icon, title }: { icon: IoniconName; title: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIconChip}>
+        <Ionicons name={icon} size={16} color={colors.accent} />
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+type FieldProps = TextInputProps & {
+  name: string;
+  label: string;
+  focused: string | null;
+  setFocused: (name: string | null) => void;
+};
+
+/** A caption label over a 48pt field on the inner surface; focus is the only time the accent appears */
+function Field({ name, label, focused, setFocused, ...props }: FieldProps) {
+  const active = focused === name;
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputWrap, active && styles.inputWrapFocused]}>
+        <TextInput
+          style={styles.input}
+          placeholderTextColor={colors.textFaint}
+          onFocus={() => setFocused(name)}
+          onBlur={() => setFocused(null)}
+          {...props}
+        />
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -29,6 +74,15 @@ export default function ProfileScreen() {
   const [oldPwd, setOldPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [changingPwd, setChangingPwd] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
+
+  // The hero sits under the status bar, so the status icons go light while this tab is on screen.
+  // The <StatusBar> is mounted only while focused, so it hands the style back when the tab blurs.
+  const [isFocused, setIsFocused] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  }, []));
 
   const handleSaveProfile = async () => {
     try {
@@ -86,164 +140,140 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* 头部 */}
-      <View style={[styles.header, { paddingTop: insets.top + space.xxl }]}>
-        <View style={styles.headerBg}>
-          <View style={styles.decorCircle1} />
-          <View style={styles.decorCircle2} />
-        </View>
-        <View style={styles.avatarContainer}>
+    <View style={styles.container}>
+      {isFocused && <StatusBar style="light" />}
+      {/* Navy behind the top of the scroll view, so an over-scroll at the top stays navy rather than grey */}
+      <View style={styles.heroBackdrop} />
+
+      <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Hero: avatar tile, name, e-mail, outlined role pill */}
+        <View style={[styles.hero, { paddingTop: insets.top + space.lg }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {String(user?.fullName || user?.username || '?').slice(0, 1).toUpperCase()}
             </Text>
           </View>
-        </View>
-        <Text style={styles.name}>{user?.fullName || user?.username}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Ionicons name="id-card-outline" size={16} color={colors.accent} style={{ marginRight: space.sm }} />
-          <Text style={styles.roleText}>{t('role.' + (user?.role || 'driver'))}</Text>
-        </View>
-      </View>
-
-      {/* 基本信息 */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIconBox}>
-            <Ionicons name="person-outline" size={16} color={colors.accent} />
+          <Text style={styles.name} numberOfLines={1}>{user?.fullName || user?.username}</Text>
+          <Text style={styles.email} numberOfLines={1}>{user?.email}</Text>
+          <View style={styles.rolePill}>
+            <Text style={styles.roleText}>{t('role.' + (user?.role || 'driver'))}</Text>
           </View>
-          <Text style={styles.sectionTitle}>{t('profile.basicInfo')}</Text>
         </View>
 
-        <Text style={styles.label}>{t('profile.name')}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder={t('profile.namePh')}
-            placeholderTextColor={colors.textFaint}
-          />
-        </View>
+        <View style={styles.body}>
+          {/* Basic info */}
+          <View style={[styles.card, styles.firstCard]}>
+            <SectionHeader icon="person-outline" title={t('profile.basicInfo')} />
 
-        <Text style={styles.label}>{t('profile.phone')}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder={t('profile.phonePh')}
-            keyboardType="phone-pad"
-            placeholderTextColor={colors.textFaint}
-          />
-        </View>
+            <Field
+              name="fullName"
+              label={t('profile.name')}
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder={t('profile.namePh')}
+              focused={focused}
+              setFocused={setFocused}
+            />
+            <Field
+              name="phone"
+              label={t('profile.phone')}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder={t('profile.phonePh')}
+              keyboardType="phone-pad"
+              focused={focused}
+              setFocused={setFocused}
+            />
+            <Field
+              name="email"
+              label={t('profile.email')}
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('profile.emailPh')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              focused={focused}
+              setFocused={setFocused}
+            />
 
-        <Text style={styles.label}>{t('profile.email')}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder={t('profile.emailPh')}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor={colors.textFaint}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.btn, styles.primaryBtn, saving && styles.btnDisabled]}
-          onPress={handleSaveProfile}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          {saving ? (
-            <ActivityIndicator color={colors.onAccent} />
-          ) : (
-            <Text style={styles.btnText}>{t('profile.save')}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* 修改密码 */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIconBox}>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.accent} />
+            <TouchableOpacity
+              style={[styles.primaryBtn, saving && styles.btnDisabled]}
+              onPress={handleSaveProfile}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <Text style={styles.primaryBtnText}>{t('profile.save')}</Text>
+              )}
+            </TouchableOpacity>
           </View>
-          <Text style={styles.sectionTitle}>{t('profile.changePw')}</Text>
-        </View>
 
-        <Text style={styles.label}>{t('profile.oldPw')}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={oldPwd}
-            onChangeText={setOldPwd}
-            secureTextEntry
-            placeholder={t('profile.oldPwPh')}
-            placeholderTextColor={colors.textFaint}
-          />
-        </View>
+          {/* Change password */}
+          <View style={styles.card}>
+            <SectionHeader icon="lock-closed-outline" title={t('profile.changePw')} />
 
-        <Text style={styles.label}>{t('profile.newPw')}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={newPwd}
-            onChangeText={setNewPwd}
-            secureTextEntry
-            placeholder={t('profile.min6')}
-            placeholderTextColor={colors.textFaint}
-          />
-        </View>
+            <Field
+              name="oldPwd"
+              label={t('profile.oldPw')}
+              value={oldPwd}
+              onChangeText={setOldPwd}
+              secureTextEntry
+              placeholder={t('profile.oldPwPh')}
+              focused={focused}
+              setFocused={setFocused}
+            />
+            <Field
+              name="newPwd"
+              label={t('profile.newPw')}
+              value={newPwd}
+              onChangeText={setNewPwd}
+              secureTextEntry
+              placeholder={t('profile.min6')}
+              focused={focused}
+              setFocused={setFocused}
+            />
 
-        <TouchableOpacity
-          style={[styles.btn, styles.primaryBtn, changingPwd && styles.btnDisabled]}
-          onPress={handleChangePassword}
-          disabled={changingPwd}
-          activeOpacity={0.8}
-        >
-          {changingPwd ? (
-            <ActivityIndicator color={colors.onAccent} />
-          ) : (
-            <Text style={styles.btnText}>{t('profile.changePw')}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* 设置：语言开关原来只在登录页有，登进来之后就再也切不了 */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionIconBox}>
-            <Ionicons name="settings-outline" size={16} color={colors.accent} />
+            <TouchableOpacity
+              style={[styles.primaryBtn, changingPwd && styles.btnDisabled]}
+              onPress={handleChangePassword}
+              disabled={changingPwd}
+              activeOpacity={0.85}
+            >
+              {changingPwd ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <Text style={styles.primaryBtnText}>{t('profile.changePw')}</Text>
+              )}
+            </TouchableOpacity>
           </View>
-          <Text style={styles.sectionTitle}>{t('profile.settings')}</Text>
-        </View>
-        <TouchableOpacity style={styles.settingRow} onPress={toggle} activeOpacity={0.8}>
-          <Ionicons name="language-outline" size={20} color={colors.textMuted} />
-          <Text style={styles.settingLabel}>{t('profile.language')}</Text>
-          <View style={styles.settingValuePill}>
-            <Text style={styles.settingValue}>{t('profile.languageValue')}</Text>
-            <Ionicons name="swap-horizontal" size={16} color={colors.accent} />
+
+          {/* Settings: the language switch lives here so it stays reachable after login */}
+          <View style={styles.card}>
+            <SectionHeader icon="settings-outline" title={t('profile.settings')} />
+            <TouchableOpacity style={styles.settingRow} onPress={toggle} activeOpacity={0.7}>
+              <Ionicons name="language-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.settingLabel}>{t('profile.language')}</Text>
+              <Text style={styles.settingValue}>{t('profile.languageValue')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </View>
 
-      {/* 退出登录 */}
-      <TouchableOpacity
-        style={styles.logoutBtn}
-        onPress={confirmLogout}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
-      </TouchableOpacity>
+          {/* Sign out: outlined danger, never a filled red block */}
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            onPress={confirmLogout}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+            <Text style={styles.logoutText}>{t('profile.logout')}</Text>
+          </TouchableOpacity>
 
-      <Text style={styles.version}>{t('profile.version')}</Text>
-    </ScrollView>
+          <Text style={styles.version}>{t('profile.version')}</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -252,146 +282,157 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  header: {
-    alignItems: 'center',
-    paddingHorizontal: space.xl,
-    paddingBottom: space.xxxl,
-    position: 'relative',
-    overflow: 'hidden',
+  flex: {
+    flex: 1,
   },
-  headerBg: {
+  scroll: {
+    flexGrow: 1,
+    paddingBottom: space.xxl,
+  },
+  heroBackdrop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 200,
-    backgroundColor: colors.surface,
+    height: '35%',
+    backgroundColor: colors.hero,
   },
-  decorCircle1: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 150,
-    height: 150,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-    opacity: 0.08,
-  },
-  decorCircle2: {
-    position: 'absolute',
-    top: -30,
-    left: -30,
-    width: 120,
-    height: 120,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentDark,
-    opacity: 0.05,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: space.lg,
+  hero: {
+    backgroundColor: colors.hero,
+    alignItems: 'center',
+    paddingHorizontal: space.lg,
+    // Room for the first card that climbs over the bottom edge
+    paddingBottom: CARD_OVERLAP + space.lg,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.xl,
-    backgroundColor: colors.accent,
+    width: 64,
+    height: 64,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: space.md,
   },
   avatarText: {
-    fontSize: font.display,
-    color: colors.onAccent,
-    fontWeight: weight.heavy,
+    fontSize: font.xl,
+    fontWeight: weight.bold,
+    color: colors.hero,
   },
   name: {
-    fontSize: font.xl,
-    fontWeight: weight.heavy,
-    color: colors.text,
-    marginBottom: space.xs,
+    fontSize: font.lg,
+    fontWeight: weight.semibold,
+    color: colors.heroText,
     textAlign: 'center',
   },
   email: {
     fontSize: font.sm,
-    color: colors.textMuted,
-    marginBottom: space.md,
+    color: colors.heroMuted,
+    marginTop: space.xs,
     textAlign: 'center',
   },
-  roleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accentSoft,
+  rolePill: {
+    marginTop: space.md,
     paddingHorizontal: space.md,
-    paddingVertical: space.sm,
+    paddingVertical: space.xs,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.heroMuted,
   },
   roleText: {
-    color: colors.accent,
-    fontSize: font.sm,
-    fontWeight: weight.bold,
+    color: colors.heroMuted,
+    fontSize: font.xs,
+    fontWeight: weight.medium,
+    letterSpacing: 0.2,
   },
-  section: {
+  body: {
+    flex: 1,
+    paddingHorizontal: space.lg,
+    backgroundColor: colors.bg,
+    gap: space.md,
+  },
+  card: {
     backgroundColor: colors.surface,
-    margin: space.lg,
-    marginBottom: 0,
     borderRadius: radius.lg,
-    padding: space.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  firstCard: {
+    marginTop: -CARD_OVERLAP,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: space.md,
     marginBottom: space.lg,
   },
-  sectionIconBox: {
+  sectionIconChip: {
     width: 32,
     height: 32,
     borderRadius: radius.sm,
     backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: space.md,
   },
   sectionTitle: {
     flex: 1,
     minWidth: 0,
-    fontSize: font.lg,
-    fontWeight: weight.bold,
+    fontSize: font.base,
+    fontWeight: weight.semibold,
     color: colors.text,
   },
-  label: {
-    fontSize: font.sm,
-    color: colors.textMuted,
-    marginBottom: space.sm,
-    fontWeight: weight.medium,
+  field: {
+    marginBottom: space.lg,
   },
-  inputContainer: {
+  label: {
+    fontSize: font.xs,
+    fontWeight: weight.medium,
+    color: colors.textFaint,
+    letterSpacing: 0.2,
+    marginBottom: space.xs,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: hit.min,
+    paddingHorizontal: space.md,
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: space.lg,
+    // Clips the input (and its web focus ring) inside the border, so the amber focus border stays whole
+    overflow: 'hidden',
+  },
+  inputWrapFocused: {
+    borderColor: colors.accent,
+    backgroundColor: colors.surface,
   },
   input: {
-    minHeight: hit.min,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
+    flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
+    paddingVertical: 0,
     fontSize: font.base,
     color: colors.text,
-  },
-  btn: {
-    borderRadius: radius.md,
-    paddingVertical: space.lg,
-    minHeight: hit.min,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: space.sm,
+    // The amber border on the wrapper shows focus; on web the browser ring is painted in the
+    // focused wrapper colour so it disappears instead of drawing a second, black ring
+    outlineWidth: 0,
+    outlineColor: colors.surface,
   },
   primaryBtn: {
+    height: hit.min,
+    borderRadius: radius.md,
     backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: space.xs,
+  },
+  primaryBtnText: {
+    color: colors.onAccent,
+    fontSize: font.base,
+    fontWeight: weight.semibold,
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
   settingRow: {
     flexDirection: 'row',
@@ -404,55 +445,32 @@ const styles = StyleSheet.create({
     minWidth: 0,
     color: colors.text,
     fontSize: font.base,
-    fontWeight: weight.semibold,
-  },
-  settingValuePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    minHeight: hit.compact,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1,
-    borderColor: colors.accent,
+    fontWeight: weight.medium,
   },
   settingValue: {
-    color: colors.accent,
+    color: colors.textMuted,
     fontSize: font.sm,
-    fontWeight: weight.bold,
   },
   logoutBtn: {
-    backgroundColor: colors.dangerSoft,
-    margin: space.lg,
-    marginTop: space.xl,
-    borderRadius: radius.md,
-    paddingVertical: space.lg,
-    minHeight: hit.min,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
     gap: space.sm,
+    height: hit.min,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.danger,
   },
   logoutText: {
     color: colors.danger,
     fontSize: font.base,
-    fontWeight: weight.bold,
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  btnText: {
-    color: colors.onAccent,
-    fontSize: font.base,
-    fontWeight: weight.bold,
+    fontWeight: weight.semibold,
   },
   version: {
     textAlign: 'center',
     color: colors.textFaint,
     fontSize: font.xs,
-    marginVertical: space.xl,
+    marginTop: space.xs,
   },
 });

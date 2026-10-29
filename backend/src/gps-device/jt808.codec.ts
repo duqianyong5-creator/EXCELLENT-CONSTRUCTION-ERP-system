@@ -525,6 +525,20 @@ export function normalizeIccid(raw: string | null | undefined): string | null {
 }
 
 /**
+ * The number an administrator copies from the SIM card itself. It is not always the ICCID: Chinese IoT
+ * cards print a 17-digit card number that does not start with 89. So hand-typed values get a looser rule
+ * than tracker-reported ones: 10-22 hex characters, spaces and hyphens ignored, and not a filler string
+ * made of one repeated character.
+ */
+const SIM_NUMBER_RE = /^[0-9A-F]{10,22}$/;
+export function normalizeSimNumber(raw: string | null | undefined): string | null {
+  const v = String(raw ?? '').replace(/[\s-]+/g, '').toUpperCase();
+  if (!SIM_NUMBER_RE.test(v)) return null;
+  if (/^(.)\1*$/.test(v)) return null;
+  return v;
+}
+
+/**
  * 0x1107 上传 ICCID：[长度(1)=20][ICCID 字符串][长度(1)][设备型号字符串]。
  * 厂家专门为「带字母的 ICCID」加的消息。
  */

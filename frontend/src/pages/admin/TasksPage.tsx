@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import {
   PlusOutlined, EnvironmentOutlined, CarOutlined, UserOutlined,
-  EyeOutlined, DeleteOutlined, PictureOutlined, DownloadOutlined,
+  EyeOutlined, DeleteOutlined, PictureOutlined, DownloadOutlined, EditOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { tasksApi, usersApi, workRecordsApi } from '../../api';
@@ -53,6 +53,10 @@ export default function TasksPage() {
   const [workRecord, setWorkRecord] = useState<any>(null);
   const [form] = Form.useForm();
   const [assignForm] = Form.useForm();
+  // Edit from the detail dialog: destination, cargo, weight, schedule and notes. Driver changes go through
+  // Assign (it notifies the driver) and the title is generated, so neither is editable here.
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm] = Form.useForm();
   const [searchText, setSearchText] = useState('');
 
   const loadData = async () => {
@@ -133,8 +137,41 @@ export default function TasksPage() {
       await tasksApi.delete(id);
       message.success(t('tasks.deleted'));
       loadData();
-    } catch {
-      message.error(t('tasks.delete_failed'));
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || t('tasks.delete_failed'));
+    }
+  };
+
+  const canEdit = (task: any) => !!task && task.status !== 'completed' && task.status !== 'cancelled';
+
+  const openEdit = () => {
+    if (!canEdit(selectedTask)) { message.warning(t('tasks.edit_locked')); return; }
+    editForm.setFieldsValue({
+      endLocation: selectedTask.endLocation,
+      cargo: selectedTask.cargo ?? '',
+      cargoWeight: selectedTask.cargoWeight != null ? Number(selectedTask.cargoWeight) : undefined,
+      scheduledAt: selectedTask.scheduledAt ? dayjs(selectedTask.scheduledAt) : null,
+      notes: selectedTask.notes ?? '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleEdit = async (values: any) => {
+    try {
+      const { scheduledAt, cargoWeight, ...rest } = values;
+      const payload = {
+        ...rest,
+        cargoWeight: cargoWeight === undefined || cargoWeight === null || cargoWeight === '' ? null : Number(cargoWeight),
+        scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
+      };
+      await tasksApi.update(selectedTask.id, payload);
+      message.success(t('tasks.updated'));
+      setEditOpen(false);
+      // keep the open detail in step with what was just saved; the table reloads behind it
+      setSelectedTask((prev: any) => ({ ...prev, ...payload }));
+      loadData();
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || t('tasks.update_failed'));
     }
   };
 
@@ -308,7 +345,14 @@ export default function TasksPage() {
         onCancel={() => setDetailOpen(false)}
         centered
         width={680}
-        footer={<Button onClick={() => setDetailOpen(false)}>{t('tasks.close')}</Button>}
+        footer={
+          <Space>
+            {canEdit(selectedTask) && (
+              <Button icon={<EditOutlined />} onClick={openEdit}>{t('tasks.edit')}</Button>
+            )}
+            <Button onClick={() => setDetailOpen(false)}>{t('tasks.close')}</Button>
+          </Space>
+        }
         destroyOnClose
       >
         {selectedTask && (
@@ -426,6 +470,36 @@ export default function TasksPage() {
             )}
           </>
         )}
+      </Modal>
+
+      {/* 编辑任务（从详情进入） */}
+      <Modal title={t('tasks.edit_title')} open={editOpen} onCancel={() => setEditOpen(false)}
+        footer={null} width={520} centered styles={compactModalStyles} destroyOnClose>
+        <Form form={editForm} onFinish={handleEdit} layout="vertical" size="small" style={{ paddingTop: 0 }}>
+          <Form.Item name="endLocation" label={t('tasks.f_destination')} style={compactFormItemStyle} rules={[{ required: true }]}>
+            <Input placeholder={t('tasks.destination_ph')} prefix={<EnvironmentOutlined style={{ color: '#ff4d4f' }} />} />
+          </Form.Item>
+          <Space size={8} style={{ width: '100%' }}>
+            <Form.Item name="cargo" label={t('tasks.f_cargo_desc')} style={{ flex: 1, marginBottom: 10 }}>
+              <Input placeholder={t('tasks.cargo_ph')} />
+            </Form.Item>
+            <Form.Item name="cargoWeight" label={t('tasks.f_weight_unit')} style={{ width: 120, marginBottom: 10 }}>
+              <InputNumber min={0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Space>
+          <Form.Item name="scheduledAt" label={t('tasks.f_scheduled')} style={compactFormItemStyle}>
+            <DatePicker showTime style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="notes" label={t('tasks.f_notes')} style={compactFormItemStyle}>
+            <TextArea rows={2} />
+          </Form.Item>
+          <div style={{ textAlign: 'right', paddingTop: 4 }}>
+            <Space size={8}>
+              <Button size="small" onClick={() => setEditOpen(false)}>{t('tasks.cancel')}</Button>
+              <Button size="small" type="primary" htmlType="submit">{t('tasks.save')}</Button>
+            </Space>
+          </div>
+        </Form>
       </Modal>
 
       {/* 创建任务 */}

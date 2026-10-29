@@ -443,14 +443,16 @@ export default function DevicesPage() {
           <Form.Item name="name" label={t('devices.fieldName')}>
             <Input placeholder={t('devices.namePlaceholder')} maxLength={128} />
           </Form.Item>
-          {/* 卡上印的号码常常四位一组带空格：输入时就去空格、转大写，校验和后端同一条规则（89 开头 + 16~20 位十六进制） */}
+          {/* The number printed on the card is often grouped with spaces or hyphens and is not always an
+              89-prefixed ICCID (Chinese IoT SIMs print a 17-digit card number): strip separators and upper-case
+              as the user types, and apply the same loose rule as the backend (10-22 hex characters). */}
           <Form.Item
             name="iccid" label={t('devices.fieldIccid')}
-            normalize={(v) => String(v ?? '').replace(/\s+/g, '').toUpperCase()}
-            rules={[{ pattern: /^89[0-9A-F]{16,20}$/, message: t('devices.iccidPattern') }]}
+            normalize={(v) => String(v ?? '').replace(/[\s-]+/g, '').toUpperCase()}
+            rules={[{ pattern: /^[0-9A-F]{10,22}$/, message: t('devices.iccidPattern') }]}
             extra={t('devices.iccidExtra')}
           >
-            <Input placeholder="898600F11926F0185264" maxLength={22} style={{ fontFamily: 'monospace' }} />
+            <Input placeholder="64050087230172061" maxLength={32} style={{ fontFamily: 'monospace' }} />
           </Form.Item>
           <Form.Item name="enabled" label={t('devices.fieldEnabled')} valuePropName="checked">
             <Switch />

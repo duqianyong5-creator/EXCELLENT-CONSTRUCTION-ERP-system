@@ -66,15 +66,18 @@ export default function SettingsPage() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [form] = Form.useForm();
-  const [adjustDefault, setAdjustDefault] = useState<number>(
-    Number(localStorage.getItem('wr_adjust_default')) === 60 ? 60 : 30,
-  );
-  const saveAdjustDefault = (v: number) => {
-    setAdjustDefault(v);
-    localStorage.setItem('wr_adjust_default', String(v));
-    message.success(t('settings.adjust_saved', {
-      value: v === 60 ? t('settings.adjust_hour') : t('settings.adjust_half_hour'),
-    }));
+  // Default time adjustment: a server setting (work_adjust_minutes) the backend applies to every job on
+  // completion. It used to live only in this browser's localStorage, where nothing could act on it.
+  const [adjustDefault, setAdjustDefault] = useState<number>(30);
+  const adjustLabel = (v: number) => (v === 60 ? t('settings.adjust_hour') : v === 0 ? t('settings.adjust_none') : t('settings.adjust_half_hour'));
+  const saveAdjustDefault = async (v: number) => {
+    try {
+      await systemSettingsApi.update({ work_adjust_minutes: String(v) });
+      setAdjustDefault(v);
+      message.success(t('settings.adjust_saved', { value: adjustLabel(v) }));
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || e?.message || t('settings.save_failed'));
+    }
   };
 
   // GPS 报警 + 清空数据（后端 system-settings）
@@ -97,6 +100,8 @@ export default function SettingsPage() {
         gps_stationary_radius_m: Number(s.gps_stationary_radius_m) || 80,
       });
       setPwdSet(!!s.clear_data_password_set);
+      const adj = Number(s.work_adjust_minutes);
+      setAdjustDefault(adj === 60 || adj === 0 ? adj : 30);
     } catch {
       /* 忽略加载失败 */
     }
@@ -258,15 +263,19 @@ export default function SettingsPage() {
           </div>
         </SettingCard>
 
-        <SettingCard
-          icon={<ClockCircleOutlined />} color={AMBER}
-          title={t('settings.adjust_title')} desc={t('settings.adjust_desc')}
-        >
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button type={adjustDefault === 30 ? 'primary' : 'default'} size="small" onClick={() => saveAdjustDefault(30)}>{t('settings.adjust_30')}</Button>
-            <Button type={adjustDefault === 60 ? 'primary' : 'default'} size="small" onClick={() => saveAdjustDefault(60)}>{t('settings.adjust_60')}</Button>
-          </div>
-        </SettingCard>
+        {/* Admin only: the settings endpoint refuses dispatchers */}
+        {isAdmin && (
+          <SettingCard
+            icon={<ClockCircleOutlined />} color={AMBER}
+            title={t('settings.adjust_title')} desc={t('settings.adjust_desc')}
+          >
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button type={adjustDefault === 0 ? 'primary' : 'default'} size="small" onClick={() => saveAdjustDefault(0)}>{t('settings.adjust_0')}</Button>
+              <Button type={adjustDefault === 30 ? 'primary' : 'default'} size="small" onClick={() => saveAdjustDefault(30)}>{t('settings.adjust_30')}</Button>
+              <Button type={adjustDefault === 60 ? 'primary' : 'default'} size="small" onClick={() => saveAdjustDefault(60)}>{t('settings.adjust_60')}</Button>
+            </div>
+          </SettingCard>
+        )}
 
         {/* GPS 异常报警设置 —— 整个 SystemSettingsController 都是 @Roles(ADMIN)，
             调度员看到这张卡也只会填完再吃一个「权限不足」，所以和操作日志、清空数据一样只给管理员 */}

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ECT Technician",
     "slug": "truck-driver-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/log.png",
     "userInterfaceStyle": "light",
@@ -15,14 +15,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.internal.truckdriver",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "任务进行中需要上报GPS位置",
-        "NSLocationAlwaysUsageDescription": "任务进行中需要后台上报GPS位置",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "任务进行中需要上报GPS位置",
         "NSCameraUsageDescription": "完成任务时需要拍摄工作照片",
-        "NSPhotoLibraryUsageDescription": "完成任务时需要选择工作照片",
-        "UIBackgroundModes": [
-          "location"
-        ]
+        "NSPhotoLibraryUsageDescription": "完成任务时需要选择工作照片"
       }
     },
     "android": {
@@ -32,19 +26,9 @@
       },
       "package": "com.internal.truckdriver",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
@@ -52,14 +36,6 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "任务进行中需要上报GPS位置",
-          "isAndroidBackgroundLocationEnabled": false,
-          "isAndroidForegroundServiceEnabled": false
-        }
-      ],
       [
         "expo-camera",
         {
@@ -75,9 +51,7 @@
         }
       ],
       "expo-font",
-      "@react-native-community/datetimepicker",
-      "react-native-background-geolocation",
-      "react-native-background-fetch"
+      "@react-native-community/datetimepicker"
     ],
     "scheme": "truckdriver",
     "extra": {

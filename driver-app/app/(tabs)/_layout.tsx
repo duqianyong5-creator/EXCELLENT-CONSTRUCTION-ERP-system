@@ -6,21 +6,22 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../src/store';
 import { useLang } from '../../src/i18n';
 import AnnouncementModal from '../../src/AnnouncementModal';
-import { colors, space, font, weight, radius, hit } from '../../src/theme';
+import { colors, space, font, weight, hit } from '../../src/theme';
 
 const ICONS: Record<string, { active: string; inactive: string }> = {
   tasks: { active: 'list', inactive: 'list-outline' },
-  tracking: { active: 'calendar', inactive: 'calendar-outline' },
+  tracking: { active: 'map', inactive: 'map-outline' },
   profile: { active: 'person', inactive: 'person-outline' },
 };
 
+// Plain icon above the label, filled when active: no pill, no border, like every mainstream app
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icon = ICONS[name] || ICONS.tasks;
   return (
-    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+    <View style={styles.iconContainer}>
       <Ionicons
         name={(focused ? icon.active : icon.inactive) as any}
-        size={24}
+        size={22}
         color={focused ? colors.accent : colors.textFaint}
       />
     </View>
@@ -46,18 +47,18 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
-          backgroundColor: colors.bg,
+          backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          // 图标区按 hit.min 给足，再留出标签行；底部加上手势条的安全区
-          height: hit.min + space.xxxl + insets.bottom,
+          // icon row + label row, plus the home-indicator safe area
+          height: hit.min + space.lg + insets.bottom,
           paddingTop: space.sm,
-          paddingBottom: space.sm + insets.bottom,
+          paddingBottom: space.xs + insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: font.xs,
-          fontWeight: weight.heavy,
-          marginTop: space.xs,
+          fontWeight: weight.medium,
+          marginTop: 2,
         },
         tabBarItemStyle: {
           paddingVertical: 0,
@@ -93,17 +94,8 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   iconContainer: {
-    width: 64,
-    height: 36,
-    borderRadius: radius.pill,
-    // 边框常驻，只换颜色，选中时不会因为多出一圈线而位移
-    borderWidth: 1,
-    borderColor: 'transparent',
+    height: 26,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconContainerActive: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
   },
 });
